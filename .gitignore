@@ -1,0 +1,54 @@
+# Virtual environments
+.venv/
+venv/
+env/
+
+# Python bytecode
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+
+# Pytest cache
+.pytest_cache/
+
+# IDE / Editor files
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+.DS_Store
+Thumbs.db
+
+# Large datasets
+data/raw/
+data/processed/
+
+# Model checkpoints
+models/*.pt
+models/*.pth
+models/*.ckpt
+models/*.pkl
+models/*.h5
+
+# Generated outputs
+outputs/plots/
+outputs/metrics/
+outputs/predictions/
+
+# Environment files
+.env
+.env.local
+.env.production
+
+# Distribution / packaging
+dist/
+build/
+*.egg-info/
+
+# Jupyter Notebook checkpoints
+.ipynb_checkpoints/
+
+# Logs
+*.log
