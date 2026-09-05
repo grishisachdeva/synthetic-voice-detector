@@ -1,0 +1,39 @@
+{
+    "dataset_name": "ASVspoof 2021 Speech DeepFake (DF)",
+    "dataset_source": "ASVspoof 2021 Official",
+    "dataset_url": "https://zenodo.org/record/4835108",
+    "metadata_source": "https://www.asvspoof.org/asvspoof2021/DF-keys-full.tar.gz",
+    "total_audio_files": 5,
+    "audio_formats": [
+        ".flac"
+    ],
+    "sample_rates": [
+        16000
+    ],
+    "channels": [
+        1
+    ],
+    "duration_statistics": {
+        "min": 1.0,
+        "max": 1.0,
+        "mean": 1.0,
+        "median": 1.0,
+        "total": 5.0
+    },
+    "labels": [
+        "bonafide",
+        "spoof"
+    ],
+    "class_counts": {
+        "bonafide": 2,
+        "spoof": 3
+    },
+    "available_splits": [
+        "eval"
+    ],
+    "speaker_information": "Available",
+    "attack_information": "Available",
+    "metadata_files": [
+        "data\\metadata\\asvspoof_keys\\ASVspoof2021.DF.cm.eval.trl.txt"
+    ]
+}

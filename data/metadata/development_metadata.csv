@@ -1,0 +1,7 @@
+file_path,file_id,speaker_id,label,label_name,attack_id,dataset_partition,duration,sample_rate
+data/raw/development/ASVspoof2019_LA_dev\flac\LA_D_2000001.flac,LA_D_2000001,LA_0069,0,bonafide,-,development,1.0,16000
+data/raw/development/ASVspoof2019_LA_dev\flac\LA_D_2000002.flac,LA_D_2000002,LA_0069,1,spoof,A01,development,1.0,16000
+data/raw/development/ASVspoof2019_LA_dev\flac\LA_D_2000003.flac,LA_D_2000003,LA_0069,1,spoof,A02,development,1.0,16000
+data/raw/development/ASVspoof2019_LA_dev\flac\LA_D_2000004.flac,LA_D_2000004,LA_0070,0,bonafide,-,development,1.0,16000
+data/raw/development/ASVspoof2019_LA_dev\flac\LA_D_2000005.flac,LA_D_2000005,LA_0070,1,spoof,A03,development,1.0,16000
+data/raw/development/ASVspoof2019_LA_dev\flac\LA_D_2000006.flac,LA_D_2000006,LA_0070,1,spoof,A04,development,1.0,16000

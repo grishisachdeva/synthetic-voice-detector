@@ -1,0 +1,6 @@
+file_path,file_name,extension,file_size_bytes,duration_seconds,sample_rate,channels,speaker_id,label,label_name,split,attack_id
+data\raw\ASVspoof2021_DF\flac\DF_E_2000001.flac,DF_E_2000001.flac,.flac,9841,1.0,16000,1,LA_0039,bonafide,bonafide,eval,-
+data\raw\ASVspoof2021_DF\flac\DF_E_2000002.flac,DF_E_2000002.flac,.flac,9841,1.0,16000,1,LA_0039,spoof,spoof,eval,A01
+data\raw\ASVspoof2021_DF\flac\DF_E_2000003.flac,DF_E_2000003.flac,.flac,9841,1.0,16000,1,LA_0040,spoof,spoof,eval,A02
+data\raw\ASVspoof2021_DF\flac\DF_E_2000004.flac,DF_E_2000004.flac,.flac,9841,1.0,16000,1,LA_0041,bonafide,bonafide,eval,-
+data\raw\ASVspoof2021_DF\flac\DF_E_2000005.flac,DF_E_2000005.flac,.flac,9841,1.0,16000,1,LA_0041,spoof,spoof,eval,A03
