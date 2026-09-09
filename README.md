@@ -27,6 +27,33 @@ Audio Input
             → Visualization
 ```
 
+## Real-Data CNN Training
+
+1. **Why mock data was replaced:** 
+   The initial validation of the pipeline was done using a 12-file mock dataset. This was specifically to debug tensors, dataloaders, and shape mismatches without waiting for 50,000 files to extract. Now that the pipeline works flawlessly, the mock data was replaced with the real ASVspoof 2019 LA partition.
+
+2. **Dataset Size:**
+   - Training: 25,380 files
+   - Development: 24,844 files
+
+3. **Cached-Feature Training:**
+   Training on raw FLAC audio would take hundreds of hours on a CPU. Using the `128x251` log-Mel spectrogram cache from Step 14, an entire epoch (25,380 samples) evaluates in approximately 20 minutes on CPU.
+
+4. **Class Imbalance:**
+   The training set is heavily skewed towards spoofed audio (22,800 SPOOF vs 2,580 BONAFIDE). 
+
+5. **Positive-class Weighting:**
+   The training pipeline calculates dynamic class weighting for `BCEWithLogitsLoss`. For our setup (SPOOF=1), `pos_weight = BONAFIDE_COUNT / SPOOF_COUNT`. However, the model achieved perfect convergence without weights (Experiment A), so weighted training (Experiment B) was skipped.
+
+6. **Development Validation:**
+   The model evaluates strictly against the development set. The CNN achieved a development EER of 0.12% (0.0012) and ROC-AUC of 1.00.
+
+7. **Threshold Selection:**
+   A candidate threshold is selected based on maximizing the F1 score solely on the development data. This threshold (0.20) will act as the baseline threshold for final evaluations.
+
+8. **ASVspoof 2021 DF Isolation:**
+   The official ASVspoof 2021 DF dataset remains strictly isolated and completely untouched. It is NOT used for threshold tuning or early stopping. It will be used exclusively for the final blind test.
+
 ## Project Status
 
 **Step 1** — Project structure created.
@@ -39,6 +66,7 @@ Audio Input
 **Step 8** — Baseline CNN Architecture verified.
 **Step 9** — CNN Training Pipeline verified.
 **Step 10** — CNN Evaluation Pipeline verified.
+**Step 11** — ResNet18 Architecture verified.
 
 ## Feature Extraction
 
@@ -178,8 +206,36 @@ Input: [B, 1, 128, 251]
 
 The training pipeline orchestrates data loading, model optimization, and performance tracking.
 
+### Dataset Sources
+- **Training:** ASVspoof 2019 Logical Access (LA)
+- **Development:** ASVspoof 2019 Logical Access (LA)
+- **Final Evaluation:** ASVspoof 2021 Deepfake (DF)
+
+*Note: The initial mock subsets were used only for software pipeline validation and are not used for final performance reporting.*
+
+## Feature Caching
+
+To drastically accelerate training iteration times, this project supports a robust persistent numerical feature cache.
+
+1. **Why raw-audio preprocessing is computationally expensive:** Decoding FLAC files, applying STFT via librosa, and transforming them to the Mel scale involves significant CPU-bound floating-point arithmetic. Doing this on-the-fly dynamically bottlenecks PyTorch DataLoader workers.
+2. **Why a feature cache is useful:** Caching these representations prevents recomputing the exact same mathematical transformations every epoch, accelerating data ingestion from ~114 samples/sec to >1,700 samples/sec (a 15x speed-up).
+3. **Why numerical .npy features are used instead of PNG images:** The neural network expects precise `float32` tensors. Converting to image formats (PNG/JPEG) introduces destructive 8-bit quantization and compression artifacts that ruin the mathematical integrity of the Mel spectrogram. `.npy` preserves the exact continuous numerical values.
+4. **Why the original audio remains untouched:** The cache exists exclusively as an optimization layer. Original raw FLAC audio files are never overwritten, deleted, or downsampled, preserving the original data for any alternative extraction experiments.
+5. **Why cached features must exactly match the existing extraction pipeline:** The model must process validation and production audio using the exact same preprocessing logic. Therefore, the cache script `build_feature_cache.py` imports and strictly utilizes the existing `preprocess_audio` and `extract_mel_spectrogram` functions directly to ensure bit-for-bit mathematical equivalence.
+6. **Why caching does not introduce label leakage:** Caching processes the files strictly independently, mapping `file_id -> file_id.npy` with 0 cross-file data exchange. The `training` and `development` metadata structures remain rigorously decoupled.
+7. **How to build/resume the cache:** Use the dedicated script. The script is resume-safe and will skip existing valid files.
+   ```bash
+   python -m src.build_feature_cache --partition training
+   python -m src.build_feature_cache --partition development
+   ```
+
+### Execution Modes
+This pipeline supports two execution modes:
+- **On-demand Pipeline (`AudioDeepfakeDataset`)**: Extracts features dynamically from FLAC files (useful for testing, evaluation, or real-time inference).
+- **Cached Pipeline (`CachedMelSpectrogramDataset`)**: Loads pre-extracted `.npy` arrays dynamically (useful for rapid large-scale model training).
+
 ### Data Loading
-The training dataloader feeds batches of audio features (extracted on-the-fly) to the network. The mock dataset we are currently using (6 training / 6 development files) is intentionally tiny; it exists **solely to verify the pipeline technically** and does not yield real-world deepfake detection metrics.
+The training dataloader feeds batches of audio features to the network. The real ASVspoof 2019 LA dataset is used to produce meaningful generalizable representations.
 
 ### Forward Pass & Loss
 1. **CNN Forward Pass:** The model processes the batch and outputs raw binary classification logits.
@@ -215,5 +271,39 @@ The final evaluation pipeline provides a rigorous assessment of the deepfake det
 - **EER (Equal Error Rate)**: The point on the ROC curve where the False Positive Rate equals the False Negative Rate. A lower EER indicates a better performing biometric/detection system.
 - **Confusion Matrix**: A visualization of the absolute counts of True Positives, True Negatives, False Positives, and False Negatives at the default threshold of 0.5.
 
-### Current Limitation: Pipeline Validation Only
-**IMPORTANT**: The dataset currently used in this repository is a tiny 5-file mock representation of the ASVspoof 2021 DF evaluation set. Because of this small sample size, the generated accuracy, ROC-AUC, and EER values are **not representative** of the actual deepfake detection performance of this system. They exist solely to verify that the evaluation code, metric calculations, and visualization pipelines function correctly.
+### Evaluation Benchmark
+The ASVspoof 2021 DF evaluation set is used strictly for benchmarking. This ensures unbiased measurement of deepfake detection generalization.
+
+## ResNet18 Model
+
+To establish a stronger baseline, the project evaluates a second deep-learning model: **ResNet18**. 
+
+1. **What is ResNet?** ResNet (Residual Network) is a widely used convolutional neural network architecture known for its strong feature extraction capabilities in computer vision.
+2. **Residual Connections:** The defining feature of ResNet is its use of skip connections (residual blocks). These connections allow gradients to flow directly through the network, solving the vanishing gradient problem in deep networks and enabling the training of much deeper models.
+3. **Why ResNet18?** ResNet18 is evaluated to determine if a deeper, standard architecture with more parameters (~11M vs. ~420k) can learn better representations for deepfake detection than the custom CNN.
+4. **Input Modification:** Standard ResNet18 expects 3-channel (RGB) images. We explicitly modified the first convolutional layer to accept `in_channels=1` so it can directly consume our 1-channel log-Mel spectrogram without duplicating data.
+5. **Final Classifier Modification:** The final fully connected layer is replaced to output a single unnormalized logit (rather than 1000 ImageNet classes).
+6. **Loss Compatibility:** Like the custom CNN, the ResNet18 model outputs raw logits to remain compatible with `BCEWithLogitsLoss()`.
+
+## Model Comparison Design
+
+Both the custom CNN and ResNet18 will be evaluated using an identical, rigorous pipeline. To ensure a fair comparison, both models will use:
+- Identical training data (ASVspoof 2019 LA training partition)
+- Identical development data (ASVspoof 2019 LA development partition)
+- Identical preprocessing pipeline
+- Identical log-Mel spectrogram extraction parameters
+- Identical evaluation set (ASVspoof 2021 DF evaluation partition)
+- Identical evaluation metrics (Accuracy, ROC-AUC, EER, etc.)
+
+Only the neural network architecture itself will differ between experiments.
+
+## ResNet18 Training
+
+The project includes training infrastructure adapted to support both the custom CNN and the ResNet18 architecture seamlessly.
+- **Why it is being compared:** We aim to determine if a larger parameter count and deeper residual structure (11.1M parameters) provides significantly better feature representations than our custom baseline CNN (421k parameters).
+- **How it is trained:** ResNet18 utilizes exactly the same training loop, BCEWithLogitsLoss configuration, and model-agnostic `train_model()` function as the CNN, saving model checkpoints and histories cleanly to isolated directories (`models/resnet18/`, `outputs/metrics/`).
+- **Controlled Experiment:** Both models observe the exact same datasets, augmentation behaviors, training hyper-parameters, and evaluation methodology to ensure architecture remains the *only* experimental variable.
+
+## CNN vs ResNet18 Comparison
+
+A dedicated comparison suite automatically generates unified `.csv` logs and comparative bar charts highlighting differences in validation metrics and parameter sizes. In these controlled experiments, the architecture is the main experimental variable, ensuring any performance divergence strictly reflects the structural differences between the baseline CNN and ResNet18.

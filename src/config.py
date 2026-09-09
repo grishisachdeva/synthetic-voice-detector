@@ -44,7 +44,7 @@ EVALUATION_DATASET = "ASVspoof2021_DF"   # Source dataset for final evaluation (
 
 TRAIN_METADATA = "data/metadata/training_metadata.csv"
 DEV_METADATA = "data/metadata/development_metadata.csv"
-EVAL_METADATA = "data/metadata/dataset_manifest.csv"  # eval rows filtered by partition == "eval"
+EVAL_METADATA = "data/metadata/asvspoof2021_df_evaluation_metadata.csv"  # The real ASVspoof2021 DF metadata
 
 # ============================================================
 # DataLoader Configuration
@@ -104,3 +104,13 @@ PREDICTION_THRESHOLD = 0.5
 LR_FACTOR = 0.5
 LR_PATIENCE = 2
 LR_MIN = 1e-7
+
+# ============================================================
+# ResNet18 Configuration
+# ============================================================
+
+RESNET_MODEL_NAME = "ResNet18Audio"
+RESNET_DROPOUT = 0.3
+RESNET_PRETRAINED = False
+RESNET_LEARNING_RATE = 1e-4
+RESNET_WEIGHT_DECAY = 1e-4

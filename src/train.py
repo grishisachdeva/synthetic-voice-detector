@@ -14,7 +14,6 @@ from src.config import (
     GRADIENT_CLIP_NORM, USE_CLASS_WEIGHT, CHECKPOINT_PATH, PREDICTION_THRESHOLD,
     LR_FACTOR, LR_PATIENCE, LR_MIN, BATCH_SIZE
 )
-from src.dataset import create_datasets, create_dataloaders, get_class_weights
 from src.model import create_model
 from src.utils import set_seed, calculate_metrics, save_checkpoint, load_checkpoint, save_training_history
 
@@ -89,30 +88,78 @@ def plot_training_curves(history, out_dir="outputs/plots"):
         ("f1", "train_f1", "val_f1", "F1 Score")
     ]
     
-    for name, train_key, val_key, ylabel in metrics_to_plot:
-        plt.figure()
-        plt.plot(epochs, [h[train_key] for h in history], label=f"Train {name.capitalize()}")
-        plt.plot(epochs, [h[val_key] for h in history], label=f"Val {name.capitalize()}")
-        plt.xlabel("Epoch")
-        plt.ylabel(ylabel)
-        plt.title(f"Training and Validation {ylabel}")
-        plt.legend()
-        plt.grid(True)
-        plt.savefig(os.path.join(out_dir, f"training_{name}.png"), dpi=150)
-        plt.close()
-        
-    # ROC-AUC is only validation here
-    plt.figure()
-    plt.plot(epochs, [h["val_roc_auc"] for h in history], label="Val ROC-AUC", color="orange")
-    plt.xlabel("Epoch")
-    plt.ylabel("ROC-AUC")
-    plt.title("Validation ROC-AUC")
+    # 1. Loss Curve
+    plt.figure(figsize=(8, 5))
+    plt.plot(epochs, [h["train_loss"] for h in history], label='Train Loss')
+    plt.plot(epochs, [h["val_loss"] for h in history], label='Validation Loss')
+    plt.xlabel('Epoch')
+    plt.ylabel('Loss')
+    plt.title('Training and Validation Loss')
+    plt.legend()
+    plt.grid(True)
+    plt.savefig(os.path.join(out_dir, "training_loss.png"), dpi=150)
+    plt.close()
+    
+    # 2. Accuracy Curve
+    plt.figure(figsize=(8, 5))
+    plt.plot(epochs, [h["train_accuracy"] for h in history], label='Train Accuracy')
+    plt.plot(epochs, [h["val_accuracy"] for h in history], label='Validation Accuracy')
+    plt.xlabel('Epoch')
+    plt.ylabel('Accuracy')
+    plt.title('Training and Validation Accuracy')
+    plt.legend()
+    plt.grid(True)
+    plt.savefig(os.path.join(out_dir, "training_accuracy.png"), dpi=150)
+    plt.close()
+    
+    # 3. Precision Curve
+    plt.figure(figsize=(8, 5))
+    plt.plot(epochs, [h["train_precision"] for h in history], label='Train Precision')
+    plt.plot(epochs, [h["val_precision"] for h in history], label='Validation Precision')
+    plt.xlabel('Epoch')
+    plt.ylabel('Precision')
+    plt.title('Training and Validation Precision')
+    plt.legend()
+    plt.grid(True)
+    plt.savefig(os.path.join(out_dir, "training_precision.png"), dpi=150)
+    plt.close()
+    
+    # 4. Recall Curve
+    plt.figure(figsize=(8, 5))
+    plt.plot(epochs, [h["train_recall"] for h in history], label='Train Recall')
+    plt.plot(epochs, [h["val_recall"] for h in history], label='Validation Recall')
+    plt.xlabel('Epoch')
+    plt.ylabel('Recall')
+    plt.title('Training and Validation Recall')
+    plt.legend()
+    plt.grid(True)
+    plt.savefig(os.path.join(out_dir, "training_recall.png"), dpi=150)
+    plt.close()
+    
+    # 5. F1 Curve
+    plt.figure(figsize=(8, 5))
+    plt.plot(epochs, [h["train_f1"] for h in history], label='Train F1')
+    plt.plot(epochs, [h["val_f1"] for h in history], label='Validation F1')
+    plt.xlabel('Epoch')
+    plt.ylabel('F1 Score')
+    plt.title('Training and Validation F1 Score')
+    plt.legend()
+    plt.grid(True)
+    plt.savefig(os.path.join(out_dir, "training_f1.png"), dpi=150)
+    plt.close()
+    
+    # 6. ROC-AUC Curve
+    plt.figure(figsize=(8, 5))
+    plt.plot(epochs, [h["val_roc_auc"] for h in history], label='Validation ROC-AUC', color='purple')
+    plt.xlabel('Epoch')
+    plt.ylabel('ROC-AUC')
+    plt.title('Validation ROC-AUC')
     plt.legend()
     plt.grid(True)
     plt.savefig(os.path.join(out_dir, "validation_roc_auc.png"), dpi=150)
     plt.close()
 
-def plot_confusion_matrix(model, loader, device, threshold=0.5, out_dir="outputs/plots"):
+def plot_confusion_matrix(model, loader, device, threshold=0.5, out_dir="outputs/plots/cnn"):
     """Generate and save confusion matrix on the validation set."""
     os.makedirs(out_dir, exist_ok=True)
     model.eval()
@@ -144,30 +191,77 @@ def plot_confusion_matrix(model, loader, device, threshold=0.5, out_dir="outputs
     except Exception as e:
         print(f"Failed to generate confusion matrix: {e}")
 
-def train_model(epochs=EPOCHS, resume_path=None, use_class_weight=USE_CLASS_WEIGHT):
+def train_model(model_name="cnn", run_name=None, epochs=EPOCHS, resume_path=None, use_class_weight=USE_CLASS_WEIGHT):
     set_seed()
     
+    if run_name is None:
+        run_name = model_name
+        
+    # Configure paths based on run_name
+    ckpt_dir = f"models/{run_name}"
+    os.makedirs(ckpt_dir, exist_ok=True)
+    ckpt_path = os.path.join(ckpt_dir, f"best_{run_name}.pth")
+    
+    os.makedirs("outputs/metrics", exist_ok=True)
+    hist_path = f"outputs/metrics/{run_name}_training_history.csv"
+    log_path = f"outputs/metrics/{run_name}_training_log.txt"
+    metrics_path = f"outputs/metrics/{run_name}_final_training_metrics.json"
+    
+    plots_dir = f"outputs/plots/{run_name}"
+    os.makedirs(plots_dir, exist_ok=True)
+    
     # 1. Datasets & Loaders
-    train_ds, dev_ds, eval_ds = create_datasets()
-    train_loader, dev_loader, eval_loader = create_dataloaders(train_ds, dev_ds, eval_ds)
+    # 1. Datasets & Loaders
+    from src.cached_dataset import create_cached_dataloaders
+    train_csv = "data/processed/mel_cache/metadata/training_cache.csv"
+    dev_csv = "data/processed/mel_cache/metadata/development_cache.csv"
+    
+    # We will pass max_files via global state or argument if needed, but let's just handle it.
+    import pandas as pd
+    from pathlib import Path
+    
+    # Check if max_files is configured (via argparse in __main__)
+    import src.config
+    max_files = getattr(src.config, 'MAX_FILES', None)
+    
+    if max_files:
+        train_df = pd.read_csv(train_csv).head(max_files)
+        train_csv_trunc = "data/processed/mel_cache/metadata/training_cache_truncated.csv"
+        train_df.to_csv(train_csv_trunc, index=False)
+        train_csv = train_csv_trunc
+        
+        dev_df = pd.read_csv(dev_csv).head(max_files)
+        dev_csv_trunc = "data/processed/mel_cache/metadata/development_cache_truncated.csv"
+        dev_df.to_csv(dev_csv_trunc, index=False)
+        dev_csv = dev_csv_trunc
+
+    train_loader, dev_loader = create_cached_dataloaders(str(train_csv), str(dev_csv), batch_size=BATCH_SIZE)
     
     # 2. Model & Device
-    model = create_model()
+    model = create_model(model_name=model_name)
     device = next(model.parameters()).device
+    print(f"Model: {model_name}")
     print(f"Device: {device}")
     if device.type == "cuda":
         print(f"GPU name: {torch.cuda.get_device_name(0)}")
         
+    print(f"Dataset: ASVspoof 2019 LA (Cached)")
+    print(f"Training samples: {len(train_loader.dataset)}")
+    print(f"Development samples: {len(dev_loader.dataset)}")
+    print(f"Batch size: {train_loader.batch_size}")
+    print(f"Epochs: {epochs}")
+    print(f"Learning rate: {LEARNING_RATE}")
+    print(f"Weight decay: {WEIGHT_DECAY}")
+    print(f"Optimizer: AdamW")
+    print(f"Scheduler: ReduceLROnPlateau")
+    print(f"Class weighting: {use_class_weight}")
+  
     # 3. Loss
     if use_class_weight:
-        weights = get_class_weights(train_ds)
-        # Assuming pos_weight is for SPOOF (index 1)
-        # get_class_weights returns [w_bonafide, w_spoof]. The scalar positive weight = w_spoof / w_bonafide
-        # Actually BCEWithLogitsLoss pos_weight is number of negative / number of positive.
-        pos_weight = get_class_weights(train_ds)
-        # Using a safer manual calculation matching the requirement:
-        bonafide_count = sum(1 for r in train_ds.metadata if r["label_name"].lower() == "bonafide")
-        spoof_count = sum(1 for r in train_ds.metadata if r["label_name"].lower() == "spoof")
+        # Calculate weights dynamically from cached dataset DataFrame
+        df = train_loader.dataset.df
+        bonafide_count = len(df[df["label"] == 0])
+        spoof_count = len(df[df["label"] == 1])
         scalar_weight = (bonafide_count / spoof_count) if spoof_count > 0 else 1.0
         pos_weight = torch.tensor([scalar_weight], device=device, dtype=torch.float32)
         criterion = nn.BCEWithLogitsLoss(pos_weight=pos_weight)
@@ -188,16 +282,17 @@ def train_model(epochs=EPOCHS, resume_path=None, use_class_weight=USE_CLASS_WEIG
     best_metric = -float('inf') # We maximize ROC-AUC or F1
     best_criterion_name = ""
     history = []
+
     
     if resume_path:
         print(f"Resuming from {resume_path}...")
         start_epoch, best_metric = load_checkpoint(resume_path, model, optimizer, scheduler)
         print(f"Resumed at epoch {start_epoch} with best metric {best_metric:.4f}")
         
-    os.makedirs("outputs/metrics", exist_ok=True)
-    log_file = open("outputs/metrics/training_log.txt", "a")
+    log_file = open(log_path, "a")
     
     patience_counter = 0
+    best_epoch = 0
     
     # 6. Training Loop
     for epoch in range(start_epoch + 1, epochs + 1):
@@ -226,10 +321,11 @@ def train_model(epochs=EPOCHS, resume_path=None, use_class_weight=USE_CLASS_WEIG
         updated_checkpoint = False
         if current_metric > best_metric:
             best_metric = current_metric
+            best_epoch = epoch
             save_checkpoint(
                 model, optimizer, scheduler, epoch, best_metric, 
                 config={"lr": LEARNING_RATE, "batch_size": BATCH_SIZE}, 
-                path=CHECKPOINT_PATH
+                path=ckpt_path
             )
             updated_checkpoint = True
             patience_counter = 0
@@ -253,7 +349,7 @@ def train_model(epochs=EPOCHS, resume_path=None, use_class_weight=USE_CLASS_WEIG
             "learning_rate": current_lr
         }
         history.append(hist_entry)
-        save_training_history(history, "outputs/metrics/training_history.csv")
+        save_training_history(history, hist_path)
         
         print(f"Train Loss: {train_loss:.4f} | Val Loss: {val_loss:.4f}")
         print(f"Train Acc:  {train_metrics['accuracy']:.4f} | Val Acc:  {val_metrics['accuracy']:.4f}")
@@ -277,33 +373,66 @@ def train_model(epochs=EPOCHS, resume_path=None, use_class_weight=USE_CLASS_WEIG
     log_file.write(f"\nTraining completed. Best model selected using Validation {best_criterion_name}.\n")
     log_file.close()
     
+    # Save final JSON metrics
+    import json
+    if history:
+        best_hist = next((h for h in history if h["epoch"] == best_epoch), history[-1])
+        final_hist = history[-1]
+        
+        final_metrics = {
+            "model_name": model_name,
+            "epochs_completed": len(history),
+            "best_epoch": best_epoch,
+            "best_validation_metric": best_metric,
+            "best_validation_roc_auc": best_hist.get("val_roc_auc", float('nan')),
+            "best_validation_f1": best_hist.get("val_f1", float('nan')),
+            "final_train_loss": final_hist.get("train_loss", float('nan')),
+            "final_val_loss": final_hist.get("val_loss", float('nan')),
+            "final_train_accuracy": final_hist.get("train_accuracy", float('nan')),
+            "final_val_accuracy": final_hist.get("val_accuracy", float('nan')),
+            "final_train_f1": final_hist.get("train_f1", float('nan')),
+            "final_val_f1": final_hist.get("val_f1", float('nan')),
+            "warning": "The current dataset is a mock subset and these values are not representative of final model performance."
+        }
+        with open(metrics_path, "w") as f:
+            json.dump(final_metrics, f, indent=4)
+    
     # Generate plots
-    plot_training_curves(history)
+    plot_training_curves(history, out_dir=plots_dir)
     
     # Reload best model and evaluate
     print("Validating checkpoint reload...")
-    best_model = create_model()
-    load_checkpoint(CHECKPOINT_PATH, best_model)
-    plot_confusion_matrix(best_model, dev_loader, device)
+    best_model = create_model(model_name=model_name)
+    load_checkpoint(ckpt_path, best_model)
+    plot_confusion_matrix(best_model, dev_loader, device, out_dir=plots_dir)
     
     return history
 
 if __name__ == "__main__":
-    parser = argparse.ArgumentParser(description="Train Baseline CNN")
+    parser = argparse.ArgumentParser(description="Train Audio Deepfake Models")
+    parser.add_argument("--model", type=str, default="cnn", choices=["cnn", "resnet18"], help="Model architecture to train")
+    parser.add_argument("--run-name", type=str, default=None, help="Name for the run (determines output folders)")
     parser.add_argument("--epochs", type=int, default=EPOCHS, help="Number of training epochs")
     parser.add_argument("--batch-size", type=int, default=BATCH_SIZE, help="Batch size")
-    parser.add_argument("--learning-rate", type=float, default=LEARNING_RATE, help="Learning rate")
+    parser.add_argument("--learning-rate", type=float, default=None, help="Learning rate (overrides config)")
     parser.add_argument("--resume", type=str, default=None, help="Path to checkpoint to resume from")
     parser.add_argument("--class-weight", action="store_true", help="Enable positive class weighting")
+    parser.add_argument("--max-files", type=int, default=None, help="Truncate dataset for smoke tests")
     
     args = parser.parse_args()
     
     # Override globals for this run if specified
     import src.config
     src.config.BATCH_SIZE = args.batch_size
-    src.config.LEARNING_RATE = args.learning_rate
-    
+    src.config.MAX_FILES = args.max_files
+    if args.learning_rate is not None:
+        src.config.LEARNING_RATE = args.learning_rate
+    elif args.model == "resnet18":
+        src.config.LEARNING_RATE = src.config.RESNET_LEARNING_RATE
+        
     train_model(
+        model_name=args.model,
+        run_name=args.run_name,
         epochs=args.epochs, 
         resume_path=args.resume, 
         use_class_weight=args.class_weight or USE_CLASS_WEIGHT

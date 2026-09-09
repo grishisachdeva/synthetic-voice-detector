@@ -1,0 +1,6 @@
+Pipeline Speed Estimate
+Tested Samples: 10
+Total Time: 4.9648 seconds
+Throughput: 2.01 samples/second
+Waveform shape verified: (64000,)
+Mel-spectrogram shape verified: (128, 251)

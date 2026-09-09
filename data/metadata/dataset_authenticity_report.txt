@@ -1,0 +1,10 @@
+ASVspoof 2019 LA Authenticity Report
+======================================
+Expected Train Files: 25380
+Actual Train Files: 25380
+Train BONAFIDE: 2580 (Expected 2580)
+Train SPOOF: 22800 (Expected 22800)
+Expected Dev Files: 24844
+Actual Dev Files: 24844
+Dev BONAFIDE: 2548 (Expected 2548)
+Dev SPOOF: 22296 (Expected 22296)

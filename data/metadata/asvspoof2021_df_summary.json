@@ -1,0 +1,14 @@
+{
+    "dataset_name": "ASVspoof 2021 DF (Partial - Zenodo 504 Timeout)",
+    "source": "Zenodo record 4835108 (part00 & part02)",
+    "total_files": 60176,
+    "bonafide_count": 2197,
+    "spoof_count": 57979,
+    "sample_rate": 16000,
+    "audio_formats": [
+        "flac"
+    ],
+    "speaker_count_if_available": 93,
+    "attack_count_if_available": 111,
+    "total_duration_hours": 49.82928718749999
+}

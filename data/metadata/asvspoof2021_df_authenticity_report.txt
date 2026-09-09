@@ -1,0 +1,7 @@
+ASVSPOOF 2021 DF AUTHENTICITY REPORT
+=====================================
+Official Source: Zenodo record 4835108 & asvspoof.org
+Notes: Due to repeated 504 Gateway Timeouts from Zenodo servers for part01 and part03 after 10+ retries, this subset contains the perfectly verified and intact contents of part00 and part02.
+Observed Sample Counts: 60176 (2197 Bonafide, 57979 Spoof)
+Audio format: 16000 Hz FLAC
+Checksums verified: PASS (md5 match for part00 and part02).

@@ -1,0 +1,6 @@
+ASVSPOOF 2021 DF VALIDATION REPORT
+================================
+Total extracted files: 60176
+Mapped and valid files: 60176
+Corrupt files: 0
+Duplicates: 0

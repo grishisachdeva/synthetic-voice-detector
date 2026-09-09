@@ -1,0 +1,37 @@
+{
+    "dataset_name": "ASVspoof2019_LA",
+    "source": "https://datashare.ed.ac.uk/handle/10283/3336",
+    "training_file_count": 25380,
+    "development_file_count": 24844,
+    "bonafide_training_count": 2580,
+    "spoof_training_count": 22800,
+    "bonafide_development_count": 2548,
+    "spoof_development_count": 22296,
+    "unique_training_speakers": 20,
+    "unique_development_speakers": 20,
+    "attack_types_training": [
+        "A03",
+        "A01",
+        "A02",
+        "-",
+        "A06",
+        "A04",
+        "A05"
+    ],
+    "attack_types_development": [
+        "A03",
+        "A01",
+        "A02",
+        "-",
+        "A06",
+        "A04",
+        "A05"
+    ],
+    "sample_rates": [
+        16000
+    ],
+    "audio_formats": [
+        "FLAC"
+    ],
+    "total_duration_hours": 48.15490786458329
+}

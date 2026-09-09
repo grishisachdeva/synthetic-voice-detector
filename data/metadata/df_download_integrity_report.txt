@@ -1,0 +1,6 @@
+ASVSPOOF 2021 DF DOWNLOAD INTEGRITY REPORT
+=============================================
+ASVspoof2021_DF_eval_part00.tar.gz : PASS (MD5: 4f2cbae07cf3ede2a1dde3b8d2ee55ea)
+ASVspoof2021_DF_eval_part01.tar.gz : FAIL (Expected: 1578c89ab433c2b60b1dce93bdf8fbec, Got: 900932e98d2a40239a25d95ebdf71299)
+ASVspoof2021_DF_eval_part03.tar.gz : FAIL (Expected: 42b7512ba2943e98a32a53c9608cf83c, Got: e978e80cc07e2b634a8ba213202c861e)
+ASVspoof2021_DF_eval_part02.tar.gz : PASS (MD5: 5497a35f0126e94a1d7a7d26db57b4f7)

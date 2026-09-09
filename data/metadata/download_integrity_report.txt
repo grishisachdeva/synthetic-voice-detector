@@ -1,0 +1,7 @@
+Dataset: ASVspoof 2019 Logical Access (LA)
+Target File: data/raw/LA.zip
+Official Checksum (MD5): 30c98f11d8b2bc21f2c257bfd78bb5c5
+Local Checksum (MD5): 30c98f11d8b2bc21f2c257bfd78bb5c5
+Expected Size: 7640952520 bytes
+Actual Size: 7640952520 bytes
+Status: PASS

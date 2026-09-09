@@ -2,8 +2,12 @@
 
 import torch
 import torch.nn as nn
+import torchvision.models as models
 
-from src.config import INPUT_CHANNELS, NUM_CLASSES, DROPOUT, N_MELS
+from src.config import (
+    INPUT_CHANNELS, NUM_CLASSES, DROPOUT, N_MELS,
+    RESNET_DROPOUT, RESNET_PRETRAINED
+)
 
 class AudioDeepfakeCNN(nn.Module):
     """
@@ -78,16 +82,69 @@ class AudioDeepfakeCNN(nn.Module):
         return logits
 
 
-def create_model(config=None) -> nn.Module:
+class AudioResNet18(nn.Module):
     """
-    Factory function to instantiate the baseline CNN and move it to the optimal device.
+    ResNet18 adapted for 1-channel Log-Mel Spectrogram inputs.
+    """
+    def __init__(self, in_channels: int = INPUT_CHANNELS, num_classes: int = NUM_CLASSES, 
+                 pretrained: bool = RESNET_PRETRAINED, dropout: float = RESNET_DROPOUT):
+        super(AudioResNet18, self).__init__()
+        
+        self.pretrained_status = pretrained
+        
+        if pretrained:
+            try:
+                # Use the modern weights API if available
+                weights = models.ResNet18_Weights.DEFAULT
+                self.resnet = models.resnet18(weights=weights)
+            except Exception as e:
+                raise RuntimeError(f"Failed to load pretrained weights for ResNet18: {e}. "
+                                   "Network restrictions might prevent downloading weights.")
+        else:
+            self.resnet = models.resnet18(weights=None)
+            
+        # 1. Modify the first convolutional layer to accept 1 channel instead of 3
+        # Original: Conv2d(3, 64, kernel_size=(7, 7), stride=(2, 2), padding=(3, 3), bias=False)
+        original_conv = self.resnet.conv1
+        self.resnet.conv1 = nn.Conv2d(
+            in_channels=in_channels,
+            out_channels=original_conv.out_channels,
+            kernel_size=original_conv.kernel_size,
+            stride=original_conv.stride,
+            padding=original_conv.padding,
+            bias=original_conv.bias is not None
+        )
+        
+        # 2. Modify the fully connected layer for binary classification
+        # Original: Linear(in_features=512, out_features=1000, bias=True)
+        num_ftrs = self.resnet.fc.in_features
+        self.resnet.fc = nn.Sequential(
+            nn.Dropout(p=dropout),
+            nn.Linear(num_ftrs, num_classes)
+            # NO Sigmoid here! We output raw logits for BCEWithLogitsLoss.
+        )
+        
+    def forward(self, x: torch.Tensor) -> torch.Tensor:
+        logits = self.resnet(x)
+        return logits
+
+
+def create_model(model_name: str = "cnn", config=None) -> nn.Module:
+    """
+    Factory function to instantiate a model ("cnn" or "resnet18") and move it to the optimal device.
     
     Returns
     -------
     nn.Module
         The initialized model on CUDA (if available) or CPU.
     """
-    model = AudioDeepfakeCNN()
+    if model_name.lower() == "cnn":
+        model = AudioDeepfakeCNN()
+    elif model_name.lower() == "resnet18":
+        model = AudioResNet18()
+    else:
+        raise ValueError(f"Unknown model_name: {model_name}. Use 'cnn' or 'resnet18'.")
+        
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
     model = model.to(device)
     return model
@@ -111,6 +168,10 @@ def get_model_summary(model: nn.Module) -> dict:
         "output_shape": "(batch_size, 1)",
         "device": str(device)
     }
+    
+    if hasattr(model, 'pretrained_status'):
+        summary["pretrained_status"] = model.pretrained_status
+        
     return summary
 
 

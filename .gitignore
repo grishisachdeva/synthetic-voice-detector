@@ -27,11 +27,18 @@ data/processed/
 data/samples/preprocessed/
 
 # Model checkpoints
-models/*.pt
-models/*.pth
-models/*.ckpt
-models/*.pkl
-models/*.h5
+models/**/*.pt
+models/**/*.pth
+models/**/*.ckpt
+models/**/*.pkl
+models/**/*.h5
+
+# Scratch scripts
+scratch_*.py
+scratch_*.ps1
+run_resnet.ps1
+data.html
+data/mock_backup/
 
 # Generated outputs
 outputs/plots/
