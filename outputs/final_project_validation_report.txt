@@ -1,0 +1,57 @@
+# Final Project Status Report
+
+## A. Project
+**Title:** Audio Deepfake & Synthetic Voice Detector
+**Objective:** To develop a robust, deep-learning-based classification system capable of analyzing speech recordings and identifying whether the audio is bona fide human speech or synthetically generated (spoofed).
+
+## B. Final Architecture
+Audio Upload (WAV/FLAC/MP3) → Decoded & Trimmed/Padded to 4s → Log-Mel Spectrogram Extraction (128x251) → Custom PyTorch CNN (AudioDeepfakeCNN) → Sigmoid Prediction → Grad-CAM Attention Extraction → Streamlit UI Rendering.
+
+## C. Dataset
+**Development/Training Dataset:** ASVspoof 2019 Logical Access (LA). Used extensively for model training, tuning, and threshold selection.
+**Final Held-Out Evaluation Dataset:** ASVspoof 2021 Deepfake (DF). Used strictly for zero-shot testing; entirely unseen during training and parameter optimization.
+
+## D. Final Model
+**Architecture:** AudioDeepfakeCNN (custom Conv2D with BatchNorm, ReLU, Dropout, and Global Average Pooling).
+**Frozen Checkpoint:** models/cnn_real/best_cnn_real.pth
+
+## E. Final Threshold
+**Threshold:** 0.5 (Fixed and untuned on the evaluation set).
+
+## F. Final Held-Out Evaluation
+The evaluation was executed cleanly against the ASVspoof 2021 DF dataset.
+- Total files available: 60,176
+- Successfully decoded/scored: 34,481
+- Excluded/undecodable (codec failures in dataset): 25,695
+
+Metrics (computed exclusively on the 34,481 valid samples):
+- Accuracy: 0.4367
+- Balanced Accuracy: 0.7007
+- Precision: 0.9986
+- Recall: 0.4188
+- F1 Score: 0.5901
+- ROC-AUC: 0.7920
+- EER: 0.2839
+
+## G. Main Limitation
+The final held-out evaluation demonstrated strong precision but substantially lower recall on the 2021 dataset compared to the 2019 development set. This clearly indicates a **domain-shift and generalization limitation**. The model performs well on architectures similar to its training data but struggles to confidently flag novel, highly sophisticated vocoder/generation algorithms present in the later 2021 attacks.
+
+## H. Explainability
+Grad-CAM was successfully implemented. By extracting gradients from the final convolutional layer (`model.block4[0]`), the system accurately highlights specific time-frequency structures on the Log-Mel Spectrogram that influence the classification decision.
+
+## I. Application
+A professional, academic Streamlit application (`app/app.py`) was successfully built. It acts purely as a non-mutating inference frontend, exposing the preprocessor, CNN predictor, visualization engines, and historic evaluation metrics without altering underlying model structures.
+
+## J. Testing
+A comprehensive Pytest suite was executed covering dataset caching, model architecture, reproducibility, prediction logic, UI components, and Grad-CAM integration.
+**Result:** 135/135 tests PASSED.
+
+## K. Integrity
+MD5 Checksum Verification confirmed that NO files were altered during validation or application development.
+- `models/cnn_real/best_cnn_real.pth` (Unchanged)
+- `outputs/metrics/final_results.json` (Unchanged)
+- `outputs/metrics/final_frozen_configuration.json` (Unchanged)
+- `outputs/predictions/final_evaluation/final_df_predictions.csv` (Unchanged)
+
+## L. Final Status
+The Audio Deepfake & Synthetic Voice Detector project is **complete and ready for academic demonstration and final B.Tech submission**.

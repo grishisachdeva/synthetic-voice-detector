@@ -307,3 +307,30 @@ The project includes training infrastructure adapted to support both the custom 
 ## CNN vs ResNet18 Comparison
 
 A dedicated comparison suite automatically generates unified `.csv` logs and comparative bar charts highlighting differences in validation metrics and parameter sizes. In these controlled experiments, the architecture is the main experimental variable, ensuring any performance divergence strictly reflects the structural differences between the baseline CNN and ResNet18.
+
+
+## Final Error Analysis
+Post-hoc analysis reveals the frozen model has extremely high precision but low recall. False Positives are negligible (19 out of 34,481), but False Negatives are dominant (19,405). The model misses many deepfakes due to the domain shift from 2019 LA to 2021 DF. The overall F1 score is 0.5901.
+
+## Robustness Testing
+The final frozen model was tested under controlled audio distortions (Gaussian noise, gain, time shift, low-pass filter) without retraining. The tests demonstrate the exact bounds of the acoustic vulnerability.
+
+## Evaluation Limitations
+Explicitly note that out of 60,176 official evaluation files, 25,695 were permanently excluded due to `libsndfile` decoder failures inherent to the dataset's FLAC headers. The 34,481 successfully scored files comprise the strict evaluation subset.
+
+
+## Explainability
+To understand what the model is looking at, we implemented **Grad-CAM (Gradient-weighted Class Activation Mapping)**.
+
+### What is Grad-CAM?
+Grad-CAM visualizes the internal activations of the final convolutional layer (`model.block4[0]`) by weighting them with the gradients backpropagated from the target class prediction (either SPOOF or BONAFIDE).
+
+### What the Heatmap Represents
+The resulting heatmap shows exactly which time-frequency regions of the Log-Mel Spectrogram contributed most strongly to the model's decision.
+
+### Limitations & Correct Interpretation
+> [!WARNING]
+> This visualization highlights **model attention**, NOT ground-truth forensic artifacts. If the model is wrong (e.g., False Positives or False Negatives), the highlighted regions show what fooled the model, not what a human should consider a true deepfake artifact.
+
+### How it helps
+By observing True Positives and False Negatives, we can qualitatively understand which types of acoustic textures the model learned to associate with 'fake' speech during its training on the 2019 dataset, and why it fails to generalize to certain novel 2021 attacks.

@@ -131,6 +131,6 @@ def test_corrupt_file_handling(tmp_path):
 def test_missing_cache_handling(mock_cache_csv):
     dataset = CachedMelSpectrogramDataset(mock_cache_csv)
     # Remove one file
-    os.remove(dataset.metadata.iloc[0]['cache_path'])
+    os.remove(dataset.metadata[0]['cache_path'])
     with pytest.raises(FileNotFoundError):
         _ = dataset[0]
